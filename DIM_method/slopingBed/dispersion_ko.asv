@@ -1,0 +1,47 @@
+function [a]=plot_Amp()
+%% shear current data
+Ins.Frh       = 0.0;
+Ins.theta     = 1*pi; 
+Ins.N         = 127;
+Ins.g         = 9.8;
+Ins.Fr_shear  = 0.10;
+Ins.alpha     = 10;
+
+%
+
+[cg_Q1,cg_Q2,k_2,cg_nvs_1,cg_nvs_2,k_1nvs,k_2nvs,omega_v] = dispersion_ko(k_1,h_1,Ins);
+end
+
+function [cg_Q1,cg_Q2,k_2,cg_nvs_1,cg_nvs_2,k_1nvs,k_2nvs,omega_v] = dispersion_ko(k_1,h_1,Ins)
+% h_2 is set zero by default
+Frh       = Ins.Frh;
+theta     = Ins.theta;
+N         = Ins.N;
+g         = Ins.g;
+Fr_shear  = Ins.Fr_shear;
+alpha     = Ins.alpha;
+%
+[omega_v,cg_Q1] = cg_quinn(N,k_1,h_1,theta,Fr_shear,alpha);
+
+
+%% with vertical shear
+h_2        = 1;
+omega_fk   = @(k) omega_fun(N,k,h_2,theta,Fr_shear,alpha);
+omega_funf = @(k) omega_fk(k)-omega_v; 
+
+k_int            = 1.2*k_1;
+% k0  = fzero(group_vel,kint);
+k_2              = fzero(omega_funf,k_int);
+[omega_v2,cg_Q2] = cg_quinn(N,k_2,h_2,theta,Fr_shear,alpha);
+
+%% no vertial shear
+
+omega_fnvs_1   = @(k) sqrt(tanh(k.*h_1)*g.*k)+k.*Fr_shear.*sqrt(g)*cos(theta)-omega_v;
+omega_fnvs_2   = @(k) sqrt(tanh(k.*h_2)*g.*k)+k.*Fr_shear.*sqrt(g)*cos(theta)-omega_v;
+
+k_1nvs         = fzero(omega_fnvs_1,k_1);
+k_2nvs         = fzero(omega_fnvs_2,k_2);
+
+cg_nvs_1       = sqrt(tanh(k_1.*h_1).*g./(k_1))/2.*(1+2*(k_1.*h_1)./sinh(2*(k_1.*h_1)))+Fr_shear.*sqrt(g)*cos(theta);
+cg_nvs_2       = sqrt(tanh(k_2.*h_2).*g./(k_2))/2.*(1+2*(k_2.*h_2)./sinh(2*(k_2.*h_2)))+Fr_shear.*sqrt(g)*cos(theta);
+end
